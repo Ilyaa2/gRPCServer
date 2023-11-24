@@ -1,0 +1,15 @@
+{
+  "appServerInfo": {
+    "serverIp": "127.0.0.1",
+    "serverPort": "8080",
+    "amountOfWorkers": 8,
+    "logLevel": "DEBUG"
+  },
+
+  "externalServerInfo": {
+    "ip": "127.0.0.2",
+    "port": "8081",
+    "login": "somelogin",
+    "password": "password"
+  }
+}

@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package dataModification;
+
+service PersonalInfo {
+  rpc getReasonOfAbsence(ContactDetails) returns (ContactDetails);
+}
+
+message ContactDetails {
+  string displayName = 1;
+  string email = 2;
+  string mobilePhone = 3;
+  string workPhone = 4;
+}
