@@ -5,42 +5,70 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"gRPCServer/config"
-	dm "gRPCServer/internal/rpc/dataModification"
+	"gRPCServer/internal/config"
+	"gRPCServer/internal/domain"
+	transport "gRPCServer/internal/transport/grpc"
+	"gRPCServer/internal/transport/grpc/sources/dataModification"
+	"google.golang.org/grpc"
+	"log"
 	"math/rand"
+	"net"
 	"net/http"
 	"strconv"
 	"time"
 )
 
 type Server struct {
-	Config           *config.Config
-	AbsenceJobsQueue chan AbsenceJob
-	Ctx              context.Context
-	Cancel           context.CancelFunc
-	dm.UnimplementedPersonalInfoServer
+	//todo не знаю куда бы запрятать JobsQueue
+	//services interface{} - можно как дать ему JobsQueue, так и чтоб worker'ы давали сверху необходимые поля
+	Config *config.Config
+	//todo это надо куда-то спрятать
+	//во вторых хотелось, чтобы она не была привязана только к одной работе.
+	JobsQueue chan domain.AbsenceJob
+	ctx       context.Context
+	cancel    context.CancelFunc
+	handler   *transport.Handler
 }
 
-type AbsenceJob struct {
-	Data   *dm.ContactDetails
-	Result chan string
-}
-
-// todo Контекст по сети может быть отменен - ctx.
-// todo ФУНДАМЕНТАЛЬНО нужно провалидировать поля пользователя
-func (s *Server) GetReasonOfAbsence(ctx context.Context, data *dm.ContactDetails) (*dm.ContactDetails, error) {
-	result := make(chan string)
-	job := AbsenceJob{
-		Data:   data,
-		Result: result,
+// todo передавать handler сверху в app.Run().
+func NewServer(cfg *config.Config) *Server {
+	//todo с контекстом потом нужно разобраться.
+	//ctx, cancel := context.WithCancel(context.Background())
+	jq := make(chan domain.AbsenceJob, 10)
+	s := &Server{
+		handler: transport.NewHandler(grpc.NewServer(), &jq),
+		//todo нужно положить число в канале тоже в конфиг
+		JobsQueue: jq,
+		Config:    cfg,
 	}
-	s.AbsenceJobsQueue <- job
-
-	data.DisplayName = data.Email + <-result
-	return data, nil
+	return s
 }
 
-func (s *Server) SetWorkersPool() {
+func (s *Server) Run() {
+	address := s.Config.AppServInfo.ServerIp + ":" + s.Config.AppServInfo.ServerPort
+	lis, err := net.Listen("tcp", address)
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+		return
+	}
+	s.setWorkersPool()
+	log.Printf("Starting gRPC listener on address: " + address)
+	if err := s.handler.GrpcServ.Serve(lis); err != nil {
+		s.GracefulStop(5 * time.Second)
+		log.Fatalf("failed to serve: %v", err)
+		return
+	}
+}
+
+func (s *Server) GracefulStop(duration time.Duration) {
+	s.handler.GrpcServ.GracefulStop()
+	//to stop workers
+	time.Sleep(duration)
+	s.cancel()
+}
+
+// todo если случилась ошибка на запросе клиента, нужно сделать так, чтоб горутина не умирала.
+func (s *Server) setWorkersPool() {
 	for i := 0; i < s.Config.AppServInfo.AmountOfWorkers; i++ {
 		go func() {
 			s.worker()
@@ -55,12 +83,13 @@ func (s *Server) SetWorkersPool() {
 func (s *Server) worker() {
 	for {
 		select {
-		case <-s.Ctx.Done():
+		case <-s.ctx.Done():
 			return
-		case job, ok := <-s.AbsenceJobsQueue:
+		case job, ok := <-s.JobsQueue:
 			if !ok {
 				return
 			}
+			//todo нужен ли сон???
 			time.Sleep(time.Millisecond)
 			resultName := job.Data.Email + imitateProcess()
 			job.Result <- resultName
@@ -77,6 +106,9 @@ func imitateProcess() string {
 	}
 	return string(b)
 }
+
+//ниже это все логика для service.
+//==============================================================
 
 type employeeData struct {
 	Status string `json:"status"`
@@ -103,7 +135,7 @@ type absenceReason struct {
 // todo нужно создать типы ошибок
 // todo ФУНДАМЕНТАЛЬНО НЕПРАВИЛЬНО должен возвращать измененный dm.ContactDetails. В ФИО дописать через словарь причину отсутствия. Нужно ли блокироваться при поиске в словаре?
 // todo Скорее всего нужно будет реализовать свою Unmodifiable/Immutable map - просто свою структуру.
-func (s *Server) reasonOfAbsence(ctx context.Context, details *dm.ContactDetails) (int, error) {
+func (s *Server) reasonOfAbsence(ctx context.Context, details *dataModification.ContactDetails) (int, error) {
 	empData, err := s.employeeDataRequest(ctx, details.Email)
 	if err == nil {
 		return 0, err

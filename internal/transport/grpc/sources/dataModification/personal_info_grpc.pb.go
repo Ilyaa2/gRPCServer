@@ -22,7 +22,7 @@ const (
 	PersonalInfo_GetReasonOfAbsence_FullMethodName = "/dataModification.PersonalInfo/getReasonOfAbsence"
 )
 
-// PersonalInfoClient is the client API for PersonalInfo rpc.
+// PersonalInfoClient is the client API for PersonalInfo sources.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type PersonalInfoClient interface {
@@ -46,7 +46,7 @@ func (c *personalInfoClient) GetReasonOfAbsence(ctx context.Context, in *Contact
 	return out, nil
 }
 
-// PersonalInfoServer is the server API for PersonalInfo rpc.
+// PersonalInfoServer is the server API for PersonalInfo sources.
 // All implementations must embed UnimplementedPersonalInfoServer
 // for forward compatibility
 type PersonalInfoServer interface {
@@ -63,7 +63,7 @@ func (UnimplementedPersonalInfoServer) GetReasonOfAbsence(context.Context, *Cont
 }
 func (UnimplementedPersonalInfoServer) mustEmbedUnimplementedPersonalInfoServer() {}
 
-// UnsafePersonalInfoServer may be embedded to opt out of forward compatibility for this rpc.
+// UnsafePersonalInfoServer may be embedded to opt out of forward compatibility for this sources.
 // Use of this interface is not recommended, as added methods to PersonalInfoServer will
 // result in compilation errors.
 type UnsafePersonalInfoServer interface {
@@ -92,7 +92,7 @@ func _PersonalInfo_GetReasonOfAbsence_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
-// PersonalInfo_ServiceDesc is the grpc.ServiceDesc for PersonalInfo rpc.
+// PersonalInfo_ServiceDesc is the grpc.ServiceDesc for PersonalInfo sources.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var PersonalInfo_ServiceDesc = grpc.ServiceDesc{

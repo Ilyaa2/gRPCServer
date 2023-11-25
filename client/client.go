@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	dm "gRPCServer/internal/rpc/dataModification"
+	"gRPCServer/internal/transport/grpc/sources/dataModification"
 	"google.golang.org/grpc"
 	"log"
 	"strconv"
@@ -35,9 +35,9 @@ func main() {
 func request(p int, mutex *sync.Mutex) {
 	conn, err := grpc.Dial(address, grpc.WithInsecure())
 	defer conn.Close()
-	c := dm.NewPersonalInfoClient(conn)
+	c := dataModification.NewPersonalInfoClient(conn)
 
-	cd := &dm.ContactDetails{
+	cd := &dataModification.ContactDetails{
 		Email: "" + strconv.Itoa(p),
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)

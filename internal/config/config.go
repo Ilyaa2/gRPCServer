@@ -5,7 +5,10 @@ import (
 	"flag"
 	"log"
 	"os"
+	"path"
 )
+
+const defaultConfigName = "config.json"
 
 type Config struct {
 	AppServInfo AppServerInfo      `json:"appServerInfo"`
@@ -27,22 +30,29 @@ type ExternalServerInfo struct {
 }
 
 // todo ОШИБКА ПРИ КОТОРОЙ JSON СТРУКТУРА НЕПРАВИЛЬНАЯ ДОЛЖНА БЫТЬ КАСТОМНАЯ И БОЛЕЕ ИНФОРМАТИВНАЯ
-func ParseJsonConfig() *Config {
-	var configPath string
-	flag.StringVar(&configPath, "config-path", "config/config.json", "config file path in json format")
-	file, err := os.Open(configPath)
+func ParseJsonConfig(configDir string) (*Config, error) {
+	var configName string
+	flag.StringVar(&configName, "config-file-name", defaultConfigName, "config file name in json format")
+	file, err := os.Open(path.Join(configDir, configName))
 	if err != nil {
 		log.Fatal(err)
+		return nil, err
 	}
 	config := Config{}
-	err = json.NewDecoder(file).Decode(&config)
-	if err != nil {
+
+	if err = json.NewDecoder(file).Decode(&config); err != nil {
 		log.Fatal(err)
+		return nil, err
 	}
-	return &config
+	if err = validateConfig(&config); err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+
+	return &config, nil
 }
 
 // TODO можно указать отрицательное количество воркеров
-func validateConfig() error {
+func validateConfig(config *Config) error {
 	return nil
 }
