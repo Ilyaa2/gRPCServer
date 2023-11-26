@@ -30,10 +30,12 @@ type ExternalServerInfo struct {
 }
 
 // todo ОШИБКА ПРИ КОТОРОЙ JSON СТРУКТУРА НЕПРАВИЛЬНАЯ ДОЛЖНА БЫТЬ КАСТОМНАЯ И БОЛЕЕ ИНФОРМАТИВНАЯ
+// todo ПЕРЕПУТАЛ МЕСТАМИ configDir с name. Я должен выбирать name, а директория одна и та же.
 func ParseJsonConfig(configDir string) (*Config, error) {
 	var configName string
 	flag.StringVar(&configName, "config-file-name", defaultConfigName, "config file name in json format")
 	file, err := os.Open(path.Join(configDir, configName))
+	defer file.Close()
 	if err != nil {
 		log.Fatal(err)
 		return nil, err

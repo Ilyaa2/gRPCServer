@@ -24,14 +24,13 @@ func NewHandler(g *grpc.Server, jQueue *chan domain.AbsenceJob) *Handler {
 
 // todo Контекст по сети может быть отменен - ctx.
 // todo ФУНДАМЕНТАЛЬНО нужно провалидировать поля пользователя
-func (s *Handler) GetReasonOfAbsence(ctx context.Context, data *dataModification.ContactDetails) (*dataModification.ContactDetails, error) {
-	result := make(chan string)
+func (h *Handler) GetReasonOfAbsence(ctx context.Context, data *dataModification.ContactDetails) (*dataModification.ContactDetails, error) {
+	result := make(chan domain.Future)
 	job := domain.AbsenceJob{
-		Data:   data,
+		Input:  data,
 		Result: result,
 	}
-	*s.JobsQueue <- job
-
-	data.DisplayName = data.Email + <-result
-	return data, nil
+	*h.JobsQueue <- job
+	future := <-result
+	return future.Output, future.Error
 }

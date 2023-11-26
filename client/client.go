@@ -38,15 +38,24 @@ func request(p int, mutex *sync.Mutex) {
 	c := dataModification.NewPersonalInfoClient(conn)
 
 	cd := &dataModification.ContactDetails{
-		Email: "" + strconv.Itoa(p),
+		DisplayName: "Иванов Семен Петрович",
+		Email:       "example@gmail.com",
+		MobilePhone: strconv.Itoa(p),
+		WorkPhone:   strconv.Itoa(p),
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 	defer cancel()
-	r, err := c.GetReasonOfAbsence(ctx, cd)
+	resp, err := c.GetReasonOfAbsence(ctx, cd)
 	//mutex.Lock()
 	if err != nil {
 		log.Fatalf("some error: %v", err)
 	}
-	log.Printf("AnswerName - %s, The number was - %d", r.DisplayName, p)
+	log.Print(
+		"my data was: \n",
+		cd.String(), "\n",
+		"the data I get", "\n",
+		resp.String(),
+	)
+
 	//mutex.Unlock()
 }

@@ -1,9 +1,9 @@
-package app
+package tests
 
 import (
 	"gRPCServer/internal/config"
 	"gRPCServer/internal/domain"
-	"gRPCServer/internal/repository"
+	mock_repository "gRPCServer/internal/repository/mocks"
 	"gRPCServer/internal/server"
 	"gRPCServer/internal/service"
 	transport "gRPCServer/internal/transport/grpc"
@@ -12,12 +12,13 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"testing"
 	"time"
 )
 
-const reasonsOptionsFileName = "reasons_options.txt"
-
-func Run(configDir string) {
+func Test(t *testing.T) {
+	configDir := "C:\\Users\\User\\GolandProjects\\gRPCServer\\configs"
+	const reasonsOptionsFileName = "reasons_options.txt"
 	cfg, err := config.ParseJsonConfig(configDir)
 	if err != nil {
 		log.Fatal(err)
@@ -26,7 +27,9 @@ func Run(configDir string) {
 	//todo нужно положить число в канале тоже в конфиг
 	jq := make(chan domain.AbsenceJob, 10)
 	handler := transport.NewHandler(grpc.NewServer(), &jq)
-	EmpRepo := repository.NewEmployeeRepo(&cfg.ExtServInfo)
+	//EmpRepo := repository.NewEmployeeRepo(&cfg.ExtServInfo)
+	//EmpRepo := mock_repository.NewMockEmployee()
+	EmpRepo := &mock_repository.EmployeeRepoMock{}
 	reasons, err := domain.NewAbsenceOptions(reasonsOptionsFileName)
 	if err != nil {
 		log.Fatal(err)
@@ -52,5 +55,3 @@ func Run(configDir string) {
 	s.GracefulStop(timeout)
 	log.Print("server was stopped")
 }
-
-//todo graceful stop (grpc) не согласован c пулом. Если grpc ожидает пока все соединения ослужатся в течение какого либо времени
