@@ -48,12 +48,13 @@ func (e *EmployeeRepo) GetByEmail(ctx context.Context, email string) (*domain.Em
 	}
 	resp, err := e.doRequest(ctx, requestInfo)
 	if err != nil {
+		err = errors.New("External server error" + err.Error())
 		return nil, err
 	}
 	respData := &domain.EmployeeData{}
 	err = json.NewDecoder(resp.Body).Decode(respData)
-	if err != nil {
-		err = errors.New("The json contract between application and external server is violated: " + err.Error())
+	if err != nil || respData.Status != "OK" {
+		err = errors.New("The json contract between application and external server is violated or there was incorrect data in the request" + err.Error())
 		return nil, err
 	}
 	return respData, nil
@@ -87,8 +88,8 @@ func (e *EmployeeRepo) GetAbsenceReason(ctx context.Context, empData *domain.Emp
 	}
 	respData := &domain.AbsenceReason{}
 	err = json.NewDecoder(resp.Body).Decode(respData)
-	if err != nil {
-		err = errors.New("The json contract between application and external server is violated: " + err.Error())
+	if err != nil || respData.Status != "OK" {
+		err = errors.New("The json contract between application and external server is violated or there was incorrect data in the request" + err.Error())
 		return nil, err
 	}
 	return respData, nil

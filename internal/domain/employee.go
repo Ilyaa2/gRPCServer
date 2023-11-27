@@ -1,11 +1,11 @@
 package domain
 
 type EmployeeData struct {
-	Status string      `json:"status"`
-	Data   []InnerData `json:"data"`
+	Status string              `json:"status"`
+	Data   []EmployeeInnerData `json:"data"`
 }
 
-type InnerData struct {
+type EmployeeInnerData struct {
 	Id          int    `json:"id"`
 	DisplayName string `json:"displayName"`
 	Email       string `json:"email"`

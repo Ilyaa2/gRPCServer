@@ -3,5 +3,6 @@ package domain
 import "errors"
 
 var (
-	ViolatedJsonContract = errors.New("the json contract between application and external server is violated")
+	ErrViolatedJsonContract = errors.New("the json contract between application and external server is violated")
+	ErrInvalidEmail         = errors.New("invalid Email")
 )

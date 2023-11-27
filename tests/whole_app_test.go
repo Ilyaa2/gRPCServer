@@ -11,7 +11,8 @@ func TestWholeServ(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockRepo := mock_repository.NewMockEmployee(ctrl)
+	_ = mockRepo
 	// mockRepo, ожидаем, что mockedVisitorLister будет вызван один раз с аргументом party.NiceVisitor и вернёт []string{“Peter”, "TheSmart"}, nil
-	mockRepo.EXPECT().ListVisitors(party.NiceVisitor).Return([]party.Visitor{{"Peter", "TheSmart"}}, nil)
+	//mockRepo.EXPECT().ListVisitors(party.NiceVisitor).Return([]party.Visitor{{"Peter", "TheSmart"}}, nil)
 	//mockRepo.EXPECT().GetByEmail
 }

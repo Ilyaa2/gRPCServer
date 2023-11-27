@@ -19,6 +19,7 @@ type Reason struct {
 
 // TODO исправить
 const dirPath = "C:\\Users\\User\\GolandProjects\\gRPCServer\\internal\\domain\\static"
+const DefaultAbsenceOptionsFile = "reasons_options.txt"
 
 func NewAbsenceOptions(filename string) (*AbsenceOptions, error) {
 	//todo

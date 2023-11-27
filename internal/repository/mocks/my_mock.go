@@ -12,7 +12,7 @@ type EmployeeRepoMock struct {
 func (e *EmployeeRepoMock) GetByEmail(_ context.Context, _ string) (*domain.EmployeeData, error) {
 	respData := &domain.EmployeeData{
 		Status: "OK",
-		Data: []domain.InnerData{
+		Data: []domain.EmployeeInnerData{
 			{
 				Id:          1234,
 				DisplayName: "Changed Name",

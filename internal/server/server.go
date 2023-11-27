@@ -13,17 +13,15 @@ import (
 )
 
 type Server struct {
-	Config *config.Config
-	//todo это надо куда-то спрятать
-	JobsQueue *chan domain.AbsenceJob
+	Config    *config.Config
+	JobsQueue domain.JobsQueue
 	ctx       context.Context
 	cancel    context.CancelFunc
 	handler   *transport.Handler
 	services  *service.Services
 }
 
-// todo передавать handler сверху в app.Run().
-func NewServer(cfg *config.Config, jq *chan domain.AbsenceJob, handler *transport.Handler, services *service.Services) *Server {
+func NewServer(cfg *config.Config, jq domain.JobsQueue, handler *transport.Handler, services *service.Services) *Server {
 	//todo с контекстом потом нужно разобраться.
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -79,7 +77,7 @@ func (s *Server) worker() {
 		select {
 		case <-s.ctx.Done():
 			return
-		case job, ok := <-(*s.JobsQueue):
+		case job, ok := <-(*s.JobsQueue.AbsenceJQ):
 			if !ok {
 				return
 			}

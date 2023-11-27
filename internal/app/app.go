@@ -17,6 +17,7 @@ import (
 
 const reasonsOptionsFileName = "reasons_options.txt"
 
+// todo graceful stop (grpc) не согласован c пулом. Если grpc ожидает пока все соединения ослужатся в течение какого либо времени
 func Run(configDir string) {
 	cfg, err := config.ParseJsonConfig(configDir)
 	if err != nil {
@@ -24,8 +25,9 @@ func Run(configDir string) {
 		return
 	}
 	//todo нужно положить число в канале тоже в конфиг
-	jq := make(chan domain.AbsenceJob, 10)
-	handler := transport.NewHandler(grpc.NewServer(), &jq)
+	channel := make(chan domain.AbsenceJob, 10)
+	jq := domain.JobsQueue{AbsenceJQ: &channel}
+	handler := transport.NewHandler(grpc.NewServer(), jq)
 	EmpRepo := repository.NewEmployeeRepo(&cfg.ExtServInfo)
 	reasons, err := domain.NewAbsenceOptions(reasonsOptionsFileName)
 	if err != nil {
@@ -35,7 +37,7 @@ func Run(configDir string) {
 	services := &service.Services{
 		Employee: service.NewEmployeeService(EmpRepo, reasons),
 	}
-	s := server.NewServer(cfg, &jq, handler, services)
+	s := server.NewServer(cfg, jq, handler, services)
 
 	go func() {
 		s.Run()
@@ -52,5 +54,3 @@ func Run(configDir string) {
 	s.GracefulStop(timeout)
 	log.Print("server was stopped")
 }
-
-//todo graceful stop (grpc) не согласован c пулом. Если grpc ожидает пока все соединения ослужатся в течение какого либо времени
