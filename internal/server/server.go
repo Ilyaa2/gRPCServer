@@ -7,31 +7,32 @@ import (
 	"gRPCServer/internal/service"
 	transport "gRPCServer/internal/transport/grpc"
 	"log"
-	"math/rand"
 	"net"
 	"time"
 )
 
 type Server struct {
-	Config    *config.Config
-	JobsQueue domain.JobsQueue
-	ctx       context.Context
-	cancel    context.CancelFunc
-	handler   *transport.Handler
-	services  *service.Services
+	Config          *config.Config
+	JobsQueue       domain.JobsQueue
+	globalCtx       context.Context
+	cancel          context.CancelFunc
+	handler         *transport.Handler
+	services        *service.Services
+	compositeLogger domain.CompositeLogger
 }
 
-func NewServer(cfg *config.Config, jq domain.JobsQueue, handler *transport.Handler, services *service.Services) *Server {
-	//todo с контекстом потом нужно разобраться.
-	ctx, cancel := context.WithCancel(context.Background())
+func NewServer(cfg *config.Config, jq domain.JobsQueue, handler *transport.Handler,
+	services *service.Services, logger domain.CompositeLogger) *Server {
 
+	ctx, cancel := context.WithCancel(context.Background())
 	s := &Server{
-		handler:   handler,
-		JobsQueue: jq,
-		Config:    cfg,
-		services:  services,
-		ctx:       ctx,
-		cancel:    cancel,
+		handler:         handler,
+		JobsQueue:       jq,
+		Config:          cfg,
+		services:        services,
+		globalCtx:       ctx,
+		cancel:          cancel,
+		compositeLogger: logger,
 	}
 	return s
 }
@@ -57,9 +58,15 @@ func (s *Server) GracefulStop(duration time.Duration) {
 	//to stop workers
 	time.Sleep(duration)
 	s.cancel()
+	close(*s.JobsQueue.AbsenceJQ)
 }
 
-// todo если случилась ошибка на запросе клиента, нужно сделать так, чтоб горутина не умирала.
+func (s *Server) Stop() {
+	s.handler.GrpcServ.Stop()
+	s.cancel()
+	close(*s.JobsQueue.AbsenceJQ)
+}
+
 func (s *Server) setWorkersPool() {
 	for i := 0; i < s.Config.AppServInfo.AmountOfWorkers; i++ {
 		go func() {
@@ -68,35 +75,21 @@ func (s *Server) setWorkersPool() {
 	}
 }
 
-// todo нужно сделать так, что
-// todo хотя с другой стороны сервер может просто закрыть канал.
-// todo причем как сервер может отменить контекст - тогда действительно воркеры не работают, так и
-// todo getReason может отменять контекст и тогда у меня воркер просто возвращается опять в пул.
 func (s *Server) worker() {
 	for {
 		select {
-		case <-s.ctx.Done():
+		case <-s.globalCtx.Done():
 			return
 		case job, ok := <-(*s.JobsQueue.AbsenceJQ):
 			if !ok {
 				return
 			}
-			//todo правильный ли контекст даю? если getReasonAbsence отменит контекст, то воркер умрет
-			result, err := s.services.Employee.GetReasonOfAbsence(context.Background(), job.Input)
+
+			result, err := s.services.Employee.GetReasonOfAbsence(job.Context, job.Input)
 			job.Result <- domain.Future{
 				Error:  err,
 				Output: result,
 			}
 		}
 	}
-}
-
-func imitateProcess() string {
-	rand.Seed(time.Now().UnixNano())
-	letterRunes := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-	b := make([]rune, 3)
-	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
-	}
-	return string(b)
 }

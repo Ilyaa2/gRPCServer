@@ -6,10 +6,10 @@ type EmployeeData struct {
 }
 
 type EmployeeInnerData struct {
-	Id          int    `json:"id"`
 	DisplayName string `json:"displayName"`
 	Email       string `json:"email"`
 	WorkPhone   string `json:"workPhone"`
+	Id          int    `json:"id"`
 }
 
 type AbsenceReason struct {
@@ -18,10 +18,10 @@ type AbsenceReason struct {
 }
 
 type AbsenceReasonData struct {
-	Id          int    `json:"id"`
-	PersonId    int    `json:"personId"`
 	CreatedDate string `json:"createdDate"`
 	DateFrom    string `json:"dateFrom"`
 	DateTo      string `json:"dateTo"`
+	Id          int    `json:"id"`
 	ReasonId    int    `json:"reasonId"`
+	PersonId    int    `json:"personId"`
 }

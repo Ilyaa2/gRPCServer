@@ -4,125 +4,239 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"gRPCServer/internal/config"
 	"gRPCServer/internal/domain"
+	"gRPCServer/pkg/util"
 	"net/http"
-	"strconv"
 	"time"
 )
 
-const (
-	EmployeeUrlPath = "/Portal/springApi/api/employees"
-	AbsenceUrlPath  = "/Portal/springApi/api/absences"
-)
-
 type EmployeeRepo struct {
-	cfg *config.ExternalServerInfo
+	compositeLogger domain.CompositeLogger
+	cfg             *config.ExternalServerInfo
 }
 
-func NewEmployeeRepo(cfg *config.ExternalServerInfo) *EmployeeRepo {
-	return &EmployeeRepo{cfg: cfg}
+func NewEmployeeRepo(cfg *config.ExternalServerInfo, logger domain.CompositeLogger) *EmployeeRepo {
+	return &EmployeeRepo{cfg: cfg, compositeLogger: logger}
 }
 
 // todo ПРОСМОТРЕТЬ ПО ВСЕМУ ПРОЕКТУ, ЧТОБ ВЕЗДЕ БЫЛИ ЗАКРЫТЫ СОЕДИНЕНИЯ.
-// todo так же чекай текущий контекст
-// todo установи таймаут на соединение с сервером. Если таймаут истек - верни ошибку.
-// todo тут или в doRequest нужно закрывать resp или resp.Body (метод close)
 func (e *EmployeeRepo) GetByEmail(ctx context.Context, email string) (*domain.EmployeeData, error) {
+	reqID := util.GetReqIDFromContext(ctx)
 	requestInfo := func() (string, interface{}) {
-		type reqBody struct {
-			Email    string    `json:"email"`
+		t := time.Now()
+		dateFrom := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
+		dateTo := time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, int(time.Second-time.Nanosecond), t.Location())
+		reqBody := struct {
 			DateFrom time.Time `json:"dateFrom"`
 			DateTo   time.Time `json:"dateTo"`
-		}
-
-		t := time.Now()
-		rb := reqBody{
+			Email    string    `json:"email"`
+		}{
 			Email:    email,
-			DateFrom: t,
-			DateTo:   t.Add(time.Hour*24 - time.Millisecond),
+			DateFrom: dateFrom,
+			DateTo:   dateTo,
 		}
-		url := "https://" + e.cfg.Ip + ":" + e.cfg.Port + EmployeeUrlPath
-		return url, rb
+		return e.cfg.EmployeeUrlPath, reqBody
 	}
 	resp, err := e.doRequest(ctx, requestInfo)
 	if err != nil {
-		err = errors.New("External server error" + err.Error())
 		return nil, err
+	}
+	if resp != nil {
+		defer resp.Body.Close()
 	}
 	respData := &domain.EmployeeData{}
 	err = json.NewDecoder(resp.Body).Decode(respData)
-	if err != nil || respData.Status != "OK" {
-		err = errors.New("The json contract between application and external server is violated or there was incorrect data in the request" + err.Error())
+	if err != nil {
+		err = fmt.Errorf("%w. Details: %v", domain.ErrViolatedJsonContract, err)
+		//todo ПОВТОР
+		e.compositeLogger.ApplicationLogger.Error(
+			"unexpected error during unmarshalling json",
+			map[string]interface{}{
+				"req-id":   reqID,
+				"package":  "repository",
+				"function": "doRequest",
+				"err":      err,
+			})
 		return nil, err
 	}
 	return respData, nil
 }
 
 // todo возможно, если пользователю нужно возвращать id, то нужно создать новую сущность, а не только contactDetails
-// todo хардкод в url -> сделать так чтоб в конфиге это задавалось
-// todo так же чекай текущий контекст
 // todo []int{empData.Data[0].Id}. Разобраться при первом запросе можно ли послать массив email или нужно много делать запросов по всем email. Задать этот вопрос
 func (e *EmployeeRepo) GetAbsenceReason(ctx context.Context, empData *domain.EmployeeData) (*domain.AbsenceReason, error) {
+
+	reqID := util.GetReqIDFromContext(ctx)
+	if empData == nil {
+		e.compositeLogger.ApplicationLogger.Error(
+			"unexpected error during unmarshalling json",
+			map[string]interface{}{
+				"req-id":   reqID,
+				"package":  "repository",
+				"function": "GetAbsenceReason",
+				"err":      domain.ErrNilData,
+			})
+		return nil, domain.ErrNilData
+	}
 	requestInfo := func() (string, interface{}) {
-		type reqBody struct {
-			PersonIds []int     `json:"personIds"`
+		t := time.Now()
+		dateFrom := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
+		dateTo := time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, int(time.Second-time.Nanosecond), t.Location())
+
+		reqBody := struct {
 			DateFrom  time.Time `json:"dateFrom"`
 			DateTo    time.Time `json:"dateTo"`
-		}
-
-		t := time.Now()
-		rb := reqBody{
+			PersonIds []int     `json:"personIds"`
+		}{
 			//todo добавил только один id
 			PersonIds: []int{empData.Data[0].Id},
-			DateFrom:  t,
-			DateTo:    t.Add(time.Hour*24 - time.Millisecond),
+			DateFrom:  dateFrom,
+			DateTo:    dateTo,
 		}
-		url := "https://" + e.cfg.Ip + ":" + e.cfg.Port + AbsenceUrlPath
-		return url, rb
+		return e.cfg.AbsenceUrlPath, reqBody
 	}
 	resp, err := e.doRequest(ctx, requestInfo)
 	if err != nil {
 		return nil, err
 	}
+	if resp != nil {
+		defer resp.Body.Close()
+	}
 	respData := &domain.AbsenceReason{}
 	err = json.NewDecoder(resp.Body).Decode(respData)
 	if err != nil || respData.Status != "OK" {
-		err = errors.New("The json contract between application and external server is violated or there was incorrect data in the request" + err.Error())
+		err = fmt.Errorf("%w. Details: %v", domain.ErrViolatedJsonContract, err)
+		//TODO ПОВТОР
+		e.compositeLogger.ApplicationLogger.Error(
+			"unexpected error during unmarshalling json",
+			map[string]interface{}{
+				"req-id":   reqID,
+				"package":  "repository",
+				"function": "doRequest",
+				"err":      err,
+			})
 		return nil, err
 	}
 	return respData, nil
 }
 
-// todo смотреть за контекстом, его могут отменить
-// todo при запросе установить дедлайн при котором сервер должен ответить. Дедлайн брать из конфигурации
 func (e *EmployeeRepo) doRequest(ctx context.Context, requestInfo func() (string, interface{})) (*http.Response, error) {
-	url, requestBody := requestInfo()
+
+	reqID := util.GetReqIDFromContext(ctx)
+	select {
+	case <-ctx.Done():
+		e.compositeLogger.RequestResponseLogger.Warn(
+			"context was expired or canceled",
+			map[string]interface{}{
+				"req-id":   reqID,
+				"package":  "repository",
+				"function": "doRequest",
+				"err":      ctx.Err(),
+			},
+		)
+		return nil, ctx.Err()
+	default:
+		url, requestBody := requestInfo()
+		req, cancelCtx, err := e.createRequest(ctx, reqID, url, requestBody)
+		defer cancelCtx()
+		if err != nil {
+			return nil, err
+		}
+		client := http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			err = fmt.Errorf("%w. Details: %v", domain.ErrExternalServer, err)
+			e.compositeLogger.HttpTrafficLogger.Error(
+				"error when requesting to external server",
+				map[string]interface{}{
+					"req-id":   reqID,
+					"package":  "repository",
+					"function": "doRequest",
+					"url":      url,
+					"err":      err,
+				})
+			return nil, err
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			err = fmt.Errorf("%w: status code of response = %v. Status: %v. Details: %v",
+				domain.ErrExternalServer, resp.StatusCode, resp.Status, err)
+			e.compositeLogger.HttpTrafficLogger.Error(
+				"status code of the request is not ok",
+				map[string]interface{}{
+					"req-id":   reqID,
+					"package":  "repository",
+					"function": "doRequest",
+					"url":      url,
+					"err":      err,
+				})
+			return nil, err
+		}
+
+		e.compositeLogger.HttpTrafficLogger.Debug(
+			"get response from external server",
+			map[string]interface{}{
+				"req-id":   reqID,
+				"package":  "repository",
+				"function": "doRequest",
+				"response": resp.Body,
+				"url":      url,
+			},
+		)
+
+		return resp, nil
+	}
+}
+
+func (e *EmployeeRepo) createRequest(ctx context.Context, reqID string, url string,
+	requestBody interface{}) (*http.Request, context.CancelFunc, error) {
+
 	jsonReq, err := json.Marshal(requestBody)
 	if err != nil {
-		errors.New("Error during the conversion into JSON: " + err.Error())
-		return nil, err
+		err = fmt.Errorf("error during the conversion into JSON: %w. "+
+			"Details: %v", domain.ErrInternalServer, err)
+		e.compositeLogger.ApplicationLogger.Error(
+			"unexpected json conversion error",
+			map[string]interface{}{
+				"req-id":   reqID,
+				"package":  "repository",
+				"function": "doRequest",
+				"err":      err,
+			},
+		)
+		return nil, nil, err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(jsonReq))
+	childCtx, cancel := context.WithTimeout(ctx, time.Duration(e.cfg.RequestTimeout)*time.Millisecond)
+
+	req, err := http.NewRequestWithContext(childCtx, http.MethodPost, url, bytes.NewBuffer(jsonReq))
 	if err != nil {
-		err = errors.New("Error during the creation of request: " + err.Error())
-		return nil, err
+		err = fmt.Errorf("error during the creation of request to send it to an external server: %w. "+
+			"Details: %v", domain.ErrInternalServer, err)
+
+		e.compositeLogger.ApplicationLogger.Error(
+			"unexpected creation request error",
+			map[string]interface{}{
+				"req-id":   reqID,
+				"package":  "repository",
+				"function": "doRequest",
+				"err":      err,
+			})
+		cancel()
+		return nil, nil, err
 	}
+
+	e.compositeLogger.HttpTrafficLogger.Debug(
+		"send request to external server",
+		map[string]interface{}{
+			"req-id":   reqID,
+			"package":  "repository",
+			"function": "doRequest",
+			"request":  requestBody,
+			"url":      url,
+		})
 
 	req.SetBasicAuth(e.cfg.Login, e.cfg.Password)
-
-	client := http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		errors.New("Error during request execution. External server might not be available: " + err.Error())
-		return nil, err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		errors.New("Error on the external server side. Status code = " + strconv.Itoa(resp.StatusCode) + ", Status: " + resp.Status)
-		return nil, err
-	}
-
-	return resp, nil
+	return req, cancel, nil
 }

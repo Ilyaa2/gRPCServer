@@ -1,8 +1,6 @@
 package main
 
-import (
-	"gRPCServer/internal/app"
-)
+import "gRPCServer/internal/app"
 
 const configDir = "configs"
 

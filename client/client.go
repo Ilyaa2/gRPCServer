@@ -33,7 +33,7 @@ func main() {
 }
 
 func request(p int, mutex *sync.Mutex) {
-	conn, err := grpc.Dial(address, grpc.WithInsecure())
+	conn, _ := grpc.Dial(address, grpc.WithInsecure())
 	defer conn.Close()
 	c := dataModification.NewPersonalInfoClient(conn)
 
@@ -46,16 +46,16 @@ func request(p int, mutex *sync.Mutex) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 	defer cancel()
 	resp, err := c.GetReasonOfAbsence(ctx, cd)
-	//mutex.Lock()
+	mutex.Lock()
 	if err != nil {
-		log.Fatalf("some error: %v", err)
+		log.Printf("some error: %v", err)
+	} else {
+		log.Print(
+			"my data was: \n",
+			cd.String(), "\n",
+			"the data I get", "\n",
+			resp.String(),
+		)
 	}
-	log.Print(
-		"my data was: \n",
-		cd.String(), "\n",
-		"the data I get", "\n",
-		resp.String(),
-	)
-
-	//mutex.Unlock()
+	mutex.Unlock()
 }

@@ -3,11 +3,10 @@ package app
 import (
 	"gRPCServer/internal/config"
 	"gRPCServer/internal/domain"
-	"gRPCServer/internal/repository"
+	mock_repository "gRPCServer/internal/repository/mocks"
 	"gRPCServer/internal/server"
 	"gRPCServer/internal/service"
 	transport "gRPCServer/internal/transport/grpc"
-	"google.golang.org/grpc"
 	"log"
 	"os"
 	"os/signal"
@@ -15,36 +14,47 @@ import (
 	"time"
 )
 
-const reasonsOptionsFileName = "reasons_options.txt"
+const logDir = "out"
+const logLvl = "DEBUG"
 
-// todo graceful stop (grpc) не согласован c пулом. Если grpc ожидает пока все соединения ослужатся в течение какого либо времени
+var paths = domain.LoggerWritersPaths{
+	GrpcTrafficFilePath: "grpcTrafficLog.txt",
+	HttpTrafficFilePath: "httpTrafficLog.txt",
+	ErrorWarnFilePath:   "errWarnLog.txt",
+	DebugFilePath:       "debugLog.txt",
+}
+
 func Run(configDir string) {
 	cfg, err := config.ParseJsonConfig(configDir)
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
-	//todo нужно положить число в канале тоже в конфиг
-	channel := make(chan domain.AbsenceJob, 10)
-	jq := domain.JobsQueue{AbsenceJQ: &channel}
-	handler := transport.NewHandler(grpc.NewServer(), jq)
-	EmpRepo := repository.NewEmployeeRepo(&cfg.ExtServInfo)
-	reasons, err := domain.NewAbsenceOptions(reasonsOptionsFileName)
+
+	compositeLogger, err := domain.NewCompositeLogger(logDir, logLvl, paths)
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
+
+	channel := make(chan domain.AbsenceJob, cfg.AppServInfo.QueueSize)
+	jq := domain.JobsQueue{AbsenceJQ: &channel}
+
+	handler := transport.NewHandler(jq, compositeLogger)
+	//EmpRepo := repository.NewEmployeeRepo(&cfg.ExtServInfo, compositeLogger)
+	EmpRepo := &mock_repository.EmployeeRepoMock{}
+	reasons := domain.NewAbsenceOptions()
+
 	services := &service.Services{
-		Employee: service.NewEmployeeService(EmpRepo, reasons),
+		Employee: service.NewEmployeeService(EmpRepo, reasons, compositeLogger),
 	}
-	s := server.NewServer(cfg, jq, handler, services)
+	s := server.NewServer(cfg, jq, handler, services, compositeLogger)
 
 	go func() {
 		s.Run()
 	}()
 	log.Print("server is working")
 
-	// Graceful Shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
 
