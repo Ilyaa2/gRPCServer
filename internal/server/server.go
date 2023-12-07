@@ -2,10 +2,12 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"gRPCServer/internal/config"
 	"gRPCServer/internal/domain"
 	"gRPCServer/internal/service"
 	transport "gRPCServer/internal/transport/grpc"
+	"gRPCServer/pkg/util"
 	"log"
 	"net"
 	"time"
@@ -37,20 +39,37 @@ func NewServer(cfg *config.Config, jq domain.JobsQueue, handler *transport.Handl
 	return s
 }
 
-func (s *Server) Run() {
+func (s *Server) Run() error {
 	address := s.Config.AppServInfo.ServerIp + ":" + s.Config.AppServInfo.ServerPort
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
-		return
+		err = fmt.Errorf("failed to listen: %v", err)
+		s.compositeLogger.ApplicationLogger.Error(
+			"",
+			map[string]interface{}{
+				"package":  "server",
+				"function": "Run",
+				"err":      err,
+			},
+		)
+		return err
 	}
 	s.setWorkersPool()
 	log.Printf("Starting gRPC listener on address: " + address)
 	if err = s.handler.GrpcServ.Serve(lis); err != nil {
 		s.GracefulStop(5 * time.Second)
-		log.Fatalf("failed to serve: %v", err)
-		return
+		err = fmt.Errorf("failed to serve: %v", err)
+		s.compositeLogger.ApplicationLogger.Error(
+			"",
+			map[string]interface{}{
+				"package":  "server",
+				"function": "Run",
+				"err":      err,
+			},
+		)
+		return err
 	}
+	return nil
 }
 
 func (s *Server) GracefulStop(duration time.Duration) {
@@ -59,12 +78,14 @@ func (s *Server) GracefulStop(duration time.Duration) {
 	time.Sleep(duration)
 	s.cancel()
 	close(*s.JobsQueue.AbsenceJQ)
+	s.compositeLogger.ApplicationLogger.Warn("shutting down the server gracefully", nil)
 }
 
 func (s *Server) Stop() {
 	s.handler.GrpcServ.Stop()
 	s.cancel()
 	close(*s.JobsQueue.AbsenceJQ)
+	s.compositeLogger.ApplicationLogger.Warn("shutting down the server", nil)
 }
 
 func (s *Server) setWorkersPool() {
@@ -84,8 +105,26 @@ func (s *Server) worker() {
 			if !ok {
 				return
 			}
-
+			s.compositeLogger.RequestResponseLogger.Debug(
+				"worker got the job",
+				map[string]interface{}{
+					"req-id":   util.GetReqIDFromContext(job.Context),
+					"package":  "server",
+					"function": "worker",
+					"job":      job.Input,
+				},
+			)
 			result, err := s.services.Employee.GetReasonOfAbsence(job.Context, job.Input)
+			s.compositeLogger.RequestResponseLogger.Debug(
+				"worker have done the job",
+				map[string]interface{}{
+					"req-id":   util.GetReqIDFromContext(job.Context),
+					"package":  "server",
+					"function": "worker",
+					"result":   result,
+					"err":      err,
+				},
+			)
 			job.Result <- domain.Future{
 				Error:  err,
 				Output: result,

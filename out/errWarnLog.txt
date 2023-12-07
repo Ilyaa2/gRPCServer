@@ -73,3 +73,13 @@
 {"level":"warning","msg":"Don't have space in the queue to process a request","req-id":"none","time":"2023-12-05T02:40:18+03:00"}
 {"level":"warning","msg":"Don't have space in the queue to process a request","req-id":"none","time":"2023-12-05T02:42:18+03:00"}
 {"level":"warning","msg":"Don't have space in the queue to process a request","req-id":"none","time":"2023-12-05T02:42:24+03:00"}
+{"level":"warning","msg":"didn't find the reason in the reasons dictionary","reasonID":100,"req-id":"none","time":"2023-12-06T00:21:54+03:00"}
+{"level":"warning","msg":"didn't find the reason in the reasons dictionary","reasonID":100,"req-id":"none","time":"2023-12-06T00:31:02+03:00"}
+{"level":"warning","msg":"didn't find the reason in the reasons dictionary","reasonID":100,"req-id":"none","time":"2023-12-06T00:31:21+03:00"}
+{"level":"warning","msg":"didn't find the reason in the reasons dictionary","reasonID":100,"req-id":"none","time":"2023-12-06T00:32:05+03:00"}
+{"level":"warning","msg":"didn't find the reason in the reasons dictionary","reasonID":100,"req-id":"none","time":"2023-12-06T00:32:35+03:00"}
+{"level":"warning","msg":"didn't find the reason in the reasons dictionary","reasonID":100,"req-id":"none","time":"2023-12-06T00:34:01+03:00"}
+{"level":"warning","msg":"didn't find the reason in the reasons dictionary","reasonID":100,"req-id":"none","time":"2023-12-06T00:34:24+03:00"}
+{"level":"warning","msg":"didn't find the reason in the reasons dictionary","reasonID":100,"req-id":"none","time":"2023-12-06T00:34:27+03:00"}
+{"level":"warning","msg":"didn't find the reason in the reasons dictionary","reasonID":100,"req-id":"none","time":"2023-12-06T00:35:44+03:00"}
+{"level":"warning","msg":"didn't find the reason in the reasons dictionary","reasonID":100,"req-id":"none","time":"2023-12-06T00:36:50+03:00"}

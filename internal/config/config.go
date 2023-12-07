@@ -22,11 +22,12 @@ type Config struct {
 }
 
 type AppServerInfo struct {
-	ServerIp        string `json:"serverIp"`
-	ServerPort      string `json:"serverPort"`
-	LogLevel        string `json:"logLevel"`
-	AmountOfWorkers int    `json:"amountOfWorkers"`
-	QueueSize       int    `json:"queueSize"`
+	ServerIp          string `json:"serverIp"`
+	ServerPort        string `json:"serverPort"`
+	LogLevel          string `json:"logLevel"`
+	AmountOfWorkers   int    `json:"amountOfWorkers"`
+	QueueSize         int    `json:"queueSize"`
+	TTLOfItemsInCache int64  `json:"ttlOfItemsInCache"`
 }
 
 type ExternalServerInfo struct {
@@ -52,6 +53,19 @@ func checkMinInt(minThreshold int) func(interface{}) error {
 	}
 }
 
+func checkMinInt64(minThreshold int) func(interface{}) error {
+	return func(value interface{}) error {
+		number, ok := value.(int64)
+		if !ok {
+			return errors.New("must be an int64")
+		}
+		if number < int64(minThreshold) {
+			return errors.New("must be more than: " + strconv.Itoa(minThreshold))
+		}
+		return nil
+	}
+}
+
 func validateConfig(config *Config) error {
 	err := validation.ValidateStruct(&config.AppServInfo,
 		validation.Field(&config.AppServInfo.ServerIp, validation.Required, is.IP),
@@ -60,6 +74,8 @@ func validateConfig(config *Config) error {
 			validation.Required, validation.By(checkMinInt(1))),
 		validation.Field(&config.AppServInfo.QueueSize, validation.Required,
 			validation.By(checkMinInt(1))),
+		validation.Field(&config.AppServInfo.TTLOfItemsInCache, validation.Required,
+			validation.By(checkMinInt64(1))),
 		validation.Field(&config.AppServInfo.LogLevel, validation.Required, is.Alpha),
 	)
 	if err != nil {

@@ -6,10 +6,12 @@ import (
 	"gRPCServer/internal/domain"
 	mock_repository "gRPCServer/internal/repository/mocks"
 	dm "gRPCServer/internal/transport/grpc/sources/dataModification"
+	"gRPCServer/pkg/cache"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	"net/http"
 	"testing"
+	"time"
 )
 
 const logDir = "../../out"
@@ -22,12 +24,15 @@ var paths = domain.LoggerWritersPaths{
 	DebugFilePath:       "debugLog.txt",
 }
 
-func prepare(t *testing.T) domain.CompositeLogger {
+const ttlCacheSeconds = 1
+
+func prepare(t *testing.T) (domain.CompositeLogger, cache.Cache) {
 	logs, err := domain.NewCompositeLogger(logDir, logLvl, paths)
 	if err != nil {
 		t.FailNow()
 	}
-	return logs
+
+	return logs, cache.NewMemoryCache(ttlCacheSeconds)
 }
 
 type mockBehavior func(*mock_repository.MockEmployee, string)
@@ -91,9 +96,9 @@ func TestEmployeeService_GetReasonOfAbsence_SuccessfulWithEmoji(t *testing.T) {
 
 		mockEmpRepo := mock_repository.NewMockEmployee(c)
 		test.mockBehavior(mockEmpRepo, test.input.Email)
-		logs := prepare(t)
+		logs, serviceCache := prepare(t)
 		reasons := domain.NewAbsenceOptions()
-		service := NewEmployeeService(mockEmpRepo, reasons, logs)
+		service := NewEmployeeService(mockEmpRepo, reasons, serviceCache, logs)
 
 		result, err := service.GetReasonOfAbsence(context.Background(), test.input)
 
@@ -153,9 +158,9 @@ func TestEmployeeService_GetReasonOfAbsence_SuccessfulWithoutEmoji(t *testing.T)
 
 		mockEmpRepo := mock_repository.NewMockEmployee(c)
 		test.mockBehavior(mockEmpRepo, test.input.Email)
-		logs := prepare(t)
+		logs, serviceCache := prepare(t)
 		reasons := domain.NewAbsenceOptions()
-		service := NewEmployeeService(mockEmpRepo, reasons, logs)
+		service := NewEmployeeService(mockEmpRepo, reasons, serviceCache, logs)
 
 		result, err := service.GetReasonOfAbsence(context.Background(), test.input)
 
@@ -186,9 +191,9 @@ func TestEmployeeService_GetReasonOfAbsence_RepoError1(t *testing.T) {
 
 		mockEmpRepo := mock_repository.NewMockEmployee(c)
 		test.mockBehavior(mockEmpRepo, test.input.Email)
-		logs := prepare(t)
+		logs, serviceCache := prepare(t)
 		reasons := domain.NewAbsenceOptions()
-		service := NewEmployeeService(mockEmpRepo, reasons, logs)
+		service := NewEmployeeService(mockEmpRepo, reasons, serviceCache, logs)
 
 		result, err := service.GetReasonOfAbsence(context.Background(), test.input)
 
@@ -235,9 +240,9 @@ func TestEmployeeService_GetReasonOfAbsence_RepoError2(t *testing.T) {
 
 		mockEmpRepo := mock_repository.NewMockEmployee(c)
 		test.mockBehavior(mockEmpRepo, test.input.Email)
-		logs := prepare(t)
+		logs, serviceCache := prepare(t)
 		reasons := domain.NewAbsenceOptions()
-		service := NewEmployeeService(mockEmpRepo, reasons, logs)
+		service := NewEmployeeService(mockEmpRepo, reasons, serviceCache, logs)
 
 		result, err := service.GetReasonOfAbsence(context.Background(), test.input)
 
@@ -297,11 +302,149 @@ func TestEmployeeService_GetReasonOfAbsence_NoReasonIdInDict(t *testing.T) {
 
 		mockEmpRepo := mock_repository.NewMockEmployee(c)
 		test.mockBehavior(mockEmpRepo, test.input.Email)
-		logs := prepare(t)
+		logs, serviceCache := prepare(t)
 		reasons := domain.NewAbsenceOptions()
-		service := NewEmployeeService(mockEmpRepo, reasons, logs)
+		service := NewEmployeeService(mockEmpRepo, reasons, serviceCache, logs)
 
 		result, err := service.GetReasonOfAbsence(context.Background(), test.input)
+
+		require.Equal(t, test.wantErr, err)
+		require.Equal(t, test.wantData, result)
+	})
+}
+
+func TestEmployeeService_GetReasonOfAbsence_CacheUsage(t *testing.T) {
+	test := Tests{
+		testName: "cache usage test. Service can't call repo methods twice",
+		input: &dm.ContactDetails{
+			DisplayName: "Иванов Семен Петрович",
+			Email:       "example@gmail.com",
+			WorkPhone:   "+71234567890",
+		},
+		mockBehavior: func(s *mock_repository.MockEmployee, email string) {
+			empData := &domain.EmployeeData{
+				Status: "OK",
+				Data: []domain.EmployeeInnerData{
+					{
+						Id:          1234,
+						DisplayName: "Иванов Семен Петрович",
+						Email:       email,
+						WorkPhone:   "+71234567890",
+					},
+				},
+			}
+
+			s.EXPECT().GetByEmail(gomock.Any(), email).Return(empData, nil).Times(1)
+			s.EXPECT().GetAbsenceReason(gomock.Any(), empData).Return(
+				&domain.AbsenceReason{
+					Status: "OK",
+					Data: []domain.AbsenceReasonData{
+						{
+							Id:          28246,
+							PersonId:    1234,
+							CreatedDate: "2023-08-14",
+							DateFrom:    "2023-08-12T00:00:00",
+							DateTo:      "2023-08-12T23:59:59",
+							ReasonId:    1,
+						},
+					},
+				}, nil).Times(1)
+		},
+		wantData: &dm.ContactDetails{
+			DisplayName: "Иванов Семен Петрович - (🏠) Личные дела",
+			Email:       "example@gmail.com",
+			WorkPhone:   "+71234567890",
+		},
+		wantErr: nil,
+	}
+
+	t.Run(test.testName, func(t *testing.T) {
+		c := gomock.NewController(t)
+		defer c.Finish()
+
+		mockEmpRepo := mock_repository.NewMockEmployee(c)
+		test.mockBehavior(mockEmpRepo, test.input.Email)
+		logs, serviceCache := prepare(t)
+		reasons := domain.NewAbsenceOptions()
+		service := NewEmployeeService(mockEmpRepo, reasons, serviceCache, logs)
+
+		result, err := service.GetReasonOfAbsence(context.Background(), test.input)
+
+		require.Equal(t, test.wantErr, err)
+		require.Equal(t, test.wantData, result)
+
+		time.Sleep(500 * time.Millisecond)
+
+		result, err = service.GetReasonOfAbsence(context.Background(), test.input)
+
+		require.Equal(t, test.wantErr, err)
+		require.Equal(t, test.wantData, result)
+	})
+}
+
+func TestEmployeeService_GetReasonOfAbsence_CacheTtl(t *testing.T) {
+	test := Tests{
+		testName: "ttl will exceeded in cache. Service must call repo methods twice.",
+		input: &dm.ContactDetails{
+			DisplayName: "Иванов Семен Петрович",
+			Email:       "example@gmail.com",
+			WorkPhone:   "+71234567890",
+		},
+		mockBehavior: func(s *mock_repository.MockEmployee, email string) {
+			empData := &domain.EmployeeData{
+				Status: "OK",
+				Data: []domain.EmployeeInnerData{
+					{
+						Id:          1234,
+						DisplayName: "Иванов Семен Петрович",
+						Email:       email,
+						WorkPhone:   "+71234567890",
+					},
+				},
+			}
+
+			s.EXPECT().GetByEmail(gomock.Any(), email).Return(empData, nil).MinTimes(2)
+			s.EXPECT().GetAbsenceReason(gomock.Any(), empData).Return(
+				&domain.AbsenceReason{
+					Status: "OK",
+					Data: []domain.AbsenceReasonData{
+						{
+							Id:          28246,
+							PersonId:    1234,
+							CreatedDate: "2023-08-14",
+							DateFrom:    "2023-08-12T00:00:00",
+							DateTo:      "2023-08-12T23:59:59",
+							ReasonId:    1,
+						},
+					},
+				}, nil).MinTimes(2)
+		},
+		wantData: &dm.ContactDetails{
+			DisplayName: "Иванов Семен Петрович - (🏠) Личные дела",
+			Email:       "example@gmail.com",
+			WorkPhone:   "+71234567890",
+		},
+		wantErr: nil,
+	}
+
+	t.Run(test.testName, func(t *testing.T) {
+		c := gomock.NewController(t)
+		defer c.Finish()
+
+		mockEmpRepo := mock_repository.NewMockEmployee(c)
+		test.mockBehavior(mockEmpRepo, test.input.Email)
+		logs, serviceCache := prepare(t)
+		reasons := domain.NewAbsenceOptions()
+		service := NewEmployeeService(mockEmpRepo, reasons, serviceCache, logs)
+
+		result, err := service.GetReasonOfAbsence(context.Background(), test.input)
+
+		require.Equal(t, test.wantErr, err)
+		require.Equal(t, test.wantData, result)
+
+		time.Sleep(2 * ttlCacheSeconds * time.Second)
+
+		result, err = service.GetReasonOfAbsence(context.Background(), test.input)
 
 		require.Equal(t, test.wantErr, err)
 		require.Equal(t, test.wantData, result)

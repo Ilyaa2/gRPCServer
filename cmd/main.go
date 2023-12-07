@@ -1,9 +1,15 @@
 package main
 
-import "gRPCServer/internal/app"
+import (
+	"gRPCServer/internal/app"
+	"log"
+)
 
 const configDir = "configs"
 
 func main() {
-	app.Run(configDir)
+	err := app.Run(configDir)
+	if err != nil {
+		log.Fatal(err)
+	}
 }

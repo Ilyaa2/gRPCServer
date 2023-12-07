@@ -10,6 +10,7 @@ import (
 	"gRPCServer/internal/service"
 	transport "gRPCServer/internal/transport/grpc"
 	"gRPCServer/internal/transport/grpc/sources/dataModification"
+	"gRPCServer/pkg/cache"
 	"google.golang.org/grpc"
 	"log"
 	"strconv"
@@ -53,7 +54,8 @@ func Test(t *testing.T) {
 		return
 	}
 	services := &service.Services{
-		Employee: service.NewEmployeeService(EmpRepo, reasons, compositeLogger),
+		Employee: service.NewEmployeeService(EmpRepo, reasons,
+			cache.NewMemoryCache(cfg.AppServInfo.TTLOfItemsInCache), compositeLogger),
 	}
 	s := server.NewServer(cfg, jq, handler, services, compositeLogger)
 

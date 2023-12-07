@@ -21,7 +21,6 @@ func NewEmployeeRepo(cfg *config.ExternalServerInfo, logger domain.CompositeLogg
 	return &EmployeeRepo{cfg: cfg, compositeLogger: logger}
 }
 
-// todo ПРОСМОТРЕТЬ ПО ВСЕМУ ПРОЕКТУ, ЧТОБ ВЕЗДЕ БЫЛИ ЗАКРЫТЫ СОЕДИНЕНИЯ.
 func (e *EmployeeRepo) GetByEmail(ctx context.Context, email string) (*domain.EmployeeData, error) {
 	reqID := util.GetReqIDFromContext(ctx)
 	requestInfo := func() (string, interface{}) {
@@ -50,7 +49,6 @@ func (e *EmployeeRepo) GetByEmail(ctx context.Context, email string) (*domain.Em
 	err = json.NewDecoder(resp.Body).Decode(respData)
 	if err != nil {
 		err = fmt.Errorf("%w. Details: %v", domain.ErrViolatedJsonContract, err)
-		//todo ПОВТОР
 		e.compositeLogger.ApplicationLogger.Error(
 			"unexpected error during unmarshalling json",
 			map[string]interface{}{
@@ -64,8 +62,6 @@ func (e *EmployeeRepo) GetByEmail(ctx context.Context, email string) (*domain.Em
 	return respData, nil
 }
 
-// todo возможно, если пользователю нужно возвращать id, то нужно создать новую сущность, а не только contactDetails
-// todo []int{empData.Data[0].Id}. Разобраться при первом запросе можно ли послать массив email или нужно много делать запросов по всем email. Задать этот вопрос
 func (e *EmployeeRepo) GetAbsenceReason(ctx context.Context, empData *domain.EmployeeData) (*domain.AbsenceReason, error) {
 
 	reqID := util.GetReqIDFromContext(ctx)

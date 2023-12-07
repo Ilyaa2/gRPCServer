@@ -124,8 +124,26 @@ func (h *Handler) GetReasonOfAbsence(ctx context.Context, data *dataModification
 
 	select {
 	case *h.JobsQueue.AbsenceJQ <- job:
+		h.compositeLogger.ApplicationLogger.Debug(
+			"handler have put the job in the queue",
+			map[string]interface{}{
+				"req-id":   reqID,
+				"package":  "handler",
+				"function": "GetReasonOfAbsence",
+				"job":      job.Input,
+			})
+
 		future := <-result
-		//TODO LOGGER DEBUG - какая инфа получена тут.
+
+		h.compositeLogger.ApplicationLogger.Debug(
+			"handler got the result from the queue",
+			map[string]interface{}{
+				"req-id":   reqID,
+				"package":  "handler",
+				"function": "GetReasonOfAbsence",
+				"future":   future.Output,
+				"err":      future.Error,
+			})
 		return future.Output, errWithGrpcCodes(future.Error)
 	default:
 		stat := status.New(codes.Unavailable, "We are experiencing a large number of requests. Try later")
