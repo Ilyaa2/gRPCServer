@@ -1,5 +1,6 @@
 package domain
 
+// AbsenceOptions used to decode the id of the reason into Emoji and Description
 type AbsenceOptions struct {
 	reasons map[int]Reason
 }

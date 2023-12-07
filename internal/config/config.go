@@ -53,6 +53,7 @@ func checkMinInt(minThreshold int) func(interface{}) error {
 	}
 }
 
+// int 64 as input expected
 func checkMinInt64(minThreshold int) func(interface{}) error {
 	return func(value interface{}) error {
 		number, ok := value.(int64)
@@ -93,6 +94,8 @@ func validateConfig(config *Config) error {
 	return err
 }
 
+// ParseJsonConfig parse the config file. Json format expected. Filename could be specified via system variable "config-file-name".
+// The config file must be in configs directory. Also there are some validation rules that could be seen in doc directory.
 func ParseJsonConfig(configDir string) (*Config, error) {
 	var configName string
 	flag.StringVar(&configName, "config-file-name", defaultConfigName, "config file name in json format")

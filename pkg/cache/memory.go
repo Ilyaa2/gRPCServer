@@ -33,6 +33,7 @@ func NewMemoryCache(defaultTtl int64) *InMemoryCache {
 	return c
 }
 
+// setTtlTimer - every second clears the outdated data.
 func (c *InMemoryCache) setTtlTimer() {
 	for {
 		c.mu.Lock()

@@ -21,6 +21,8 @@ func NewEmployeeRepo(cfg *config.ExternalServerInfo, logger domain.CompositeLogg
 	return &EmployeeRepo{cfg: cfg, compositeLogger: logger}
 }
 
+// GetByEmail - first request to the external server. It calculates the boundaries of current day and send appropriate
+// request using email of the person.
 func (e *EmployeeRepo) GetByEmail(ctx context.Context, email string) (*domain.EmployeeData, error) {
 	reqID := util.GetReqIDFromContext(ctx)
 	requestInfo := func() (string, interface{}) {
@@ -62,6 +64,8 @@ func (e *EmployeeRepo) GetByEmail(ctx context.Context, email string) (*domain.Em
 	return respData, nil
 }
 
+// GetAbsenceReason - second request to the external server. It calculates the boundaries of current day and send an
+// appropriate request data got from the previous request.
 func (e *EmployeeRepo) GetAbsenceReason(ctx context.Context, empData *domain.EmployeeData) (*domain.AbsenceReason, error) {
 	reqID := util.GetReqIDFromContext(ctx)
 	if empData == nil {
@@ -85,7 +89,6 @@ func (e *EmployeeRepo) GetAbsenceReason(ctx context.Context, empData *domain.Emp
 			DateTo    time.Time `json:"dateTo"`
 			PersonIds []int     `json:"personIds"`
 		}{
-			//todo добавил только один id
 			PersonIds: []int{empData.Data[0].Id},
 			DateFrom:  dateFrom,
 			DateTo:    dateTo,
@@ -103,7 +106,6 @@ func (e *EmployeeRepo) GetAbsenceReason(ctx context.Context, empData *domain.Emp
 	err = json.NewDecoder(resp.Body).Decode(respData)
 	if err != nil || respData.Status != "OK" {
 		err = fmt.Errorf("%w. Details: %v", domain.ErrViolatedJsonContract, err)
-		//TODO ПОВТОР
 		e.compositeLogger.ApplicationLogger.Error(
 			"unexpected error during unmarshalling json",
 			map[string]interface{}{
@@ -117,6 +119,8 @@ func (e *EmployeeRepo) GetAbsenceReason(ctx context.Context, empData *domain.Emp
 	return respData, nil
 }
 
+// doRequest makes request to the external server using the format of request specified by the module above.
+// If the server is too slow, the context will become exceeded and the error will be returned.
 func (e *EmployeeRepo) doRequest(ctx context.Context, requestInfo func() (string, interface{})) (*http.Response, error) {
 	reqID := util.GetReqIDFromContext(ctx)
 	select {

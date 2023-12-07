@@ -38,6 +38,7 @@ func NewServer(cfg *config.Config, jq domain.JobsQueue, handler *transport.Handl
 	return s
 }
 
+// Run launch worker pool and grpc server. If an error appears then server will stop it gracefully.
 func (s *Server) Run() error {
 	address := s.Config.AppServInfo.ServerIp + ":" + s.Config.AppServInfo.ServerPort
 	lis, err := net.Listen("tcp", address)
@@ -95,6 +96,9 @@ func (s *Server) setWorkersPool() {
 	}
 }
 
+// worker takes the task in JobsQueue. Task was created by handler which accepts all requests via grpc.
+// After processing worker put the request in the Future channel.
+// Handler was blocked on this channel all that processing time.
 func (s *Server) worker() {
 	for {
 		select {

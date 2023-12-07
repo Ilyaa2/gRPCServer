@@ -23,6 +23,7 @@ type Handler struct {
 	compositeLogger domain.CompositeLogger
 }
 
+// unaryLogInterceptor used for logging grpc traffic, and also sets the id for each request.
 func (h *Handler) unaryLogInterceptor(ctx context.Context, req interface{},
 	info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	reqID := uuid.New().String()
@@ -89,6 +90,10 @@ func errWithGrpcCodes(err error) error {
 	}
 }
 
+// GetReasonOfAbsence validates the user's input and if it is correct then passes it to the JobsQueue.
+// After that handler blocks and waits the response. Anytime user can cancel task by using the context.
+// JobsQueue this is the struct on the server which used by workers. The response will be wrapped in the
+// proper grpc codes form.
 func (h *Handler) GetReasonOfAbsence(ctx context.Context, data *dataModification.ContactDetails) (*dataModification.ContactDetails, error) {
 	reqID, ok := ctx.Value("req-id").(string)
 	if !ok {

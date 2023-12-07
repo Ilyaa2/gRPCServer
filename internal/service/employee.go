@@ -25,6 +25,9 @@ func NewEmployeeService(repo repository.Employee, reasons *domain.AbsenceOptions
 	}
 }
 
+// GetReasonOfAbsence decodes the reasonID, which was obtained thanks to the repository methods.
+// Formulates the correct structure, which can already be considered a complete response to the user.
+// Also uses caching of previous requests.
 func (e *EmployeeService) GetReasonOfAbsence(ctx context.Context,
 	details *dataModification.ContactDetails) (*dataModification.ContactDetails, error) {
 	var response *dataModification.ContactDetails

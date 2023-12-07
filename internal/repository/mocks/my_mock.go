@@ -9,15 +9,15 @@ import (
 type EmployeeRepoMock struct {
 }
 
-func (e *EmployeeRepoMock) GetByEmail(_ context.Context, _ string) (*domain.EmployeeData, error) {
+func (e *EmployeeRepoMock) GetByEmail(_ context.Context, email string) (*domain.EmployeeData, error) {
 	respData := &domain.EmployeeData{
 		Status: "OK",
 		Data: []domain.EmployeeInnerData{
 			{
 				Id:          1234,
-				DisplayName: "Changed Name",
-				Email:       "example@gmail.com",
-				WorkPhone:   "!",
+				DisplayName: "Иванов Семен Петрович",
+				Email:       email,
+				WorkPhone:   "",
 			},
 		},
 	}

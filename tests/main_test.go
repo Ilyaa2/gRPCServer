@@ -2,7 +2,6 @@ package tests
 
 import (
 	"context"
-	"fmt"
 	"gRPCServer/internal/config"
 	"gRPCServer/internal/domain"
 	mock_repository "gRPCServer/internal/repository/mocks"
@@ -11,8 +10,9 @@ import (
 	transport "gRPCServer/internal/transport/grpc"
 	"gRPCServer/internal/transport/grpc/sources/dataModification"
 	"gRPCServer/pkg/cache"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
-	"log"
+	"google.golang.org/grpc/codes"
 	"strconv"
 	"sync"
 	"testing"
@@ -20,7 +20,7 @@ import (
 )
 
 const configDir = "../configs"
-const logDir = "out"
+const logDir = "../out"
 const logLvl = "DEBUG"
 
 var paths = domain.LoggerWritersPaths{
@@ -30,29 +30,29 @@ var paths = domain.LoggerWritersPaths{
 	DebugFilePath:       "debugLog.txt",
 }
 
-func Test(t *testing.T) {
+func TestWholeApp(t *testing.T) {
 	cfg, err := config.ParseJsonConfig(configDir)
 	if err != nil {
-		log.Fatal(err)
-		return
+		t.Log(err)
+		t.FailNow()
 	}
 
 	compositeLogger, err := domain.NewCompositeLogger(logDir, logLvl, paths)
 	if err != nil {
-		return
+		t.Log(err)
+		t.FailNow()
 	}
 
 	channel := make(chan domain.AbsenceJob, cfg.AppServInfo.QueueSize)
 	jq := domain.JobsQueue{AbsenceJQ: &channel}
 	handler := transport.NewHandler(jq, compositeLogger)
-	//EmpRepo := repository.NewEmployeeRepo(&cfg.ExtServInfo)
-	//EmpRepo := mock_repository.NewMockEmployee()
 	EmpRepo := &mock_repository.EmployeeRepoMock{}
 	reasons := domain.NewAbsenceOptions()
 	if err != nil {
-		log.Fatal(err)
-		return
+		t.Log(err)
+		t.FailNow()
 	}
+
 	services := &service.Services{
 		Employee: service.NewEmployeeService(EmpRepo, reasons,
 			cache.NewMemoryCache(cfg.AppServInfo.TTLOfItemsInCache), compositeLogger),
@@ -60,16 +60,21 @@ func Test(t *testing.T) {
 	s := server.NewServer(cfg, jq, handler, services, compositeLogger)
 
 	go func() {
-		s.Run()
+		err := s.Run()
+		if err != nil {
+			t.Log(err)
+			t.FailNow()
+		}
 	}()
-	log.Print("server is working")
+	t.Log("server is working")
 
-	go clientsRequestImitation()
+	t.Run("requests to server", func(t *testing.T) {
+		go clientsRequestImitation(t)
 
-	//time.Sleep(500 * time.Millisecond)
-	const timeout = 5 * time.Second
-	s.GracefulStop(timeout)
-	log.Print("server was stopped")
+		time.Sleep(500 * time.Millisecond)
+		s.Stop()
+		t.Log("server was stopped")
+	})
 }
 
 const (
@@ -77,45 +82,47 @@ const (
 	n       = 100
 )
 
-// TODO сделать так, чтобы все запросы были со статусом OK.
-// ну или хотя бы проверять что у них не было ошибки.
-func clientsRequestImitation() {
+func clientsRequestImitation(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(n)
 	for i := 0; i < n; i++ {
 		go func(p int) {
 			defer wg.Done()
 			time.Sleep(time.Nanosecond)
-			request(p)
+			request(p, t)
 		}(i)
 	}
 
 	wg.Wait()
-	fmt.Println("Done it")
+	t.Log("Done requests")
 }
 
-func request(p int) {
+func request(p int, t *testing.T) {
 	conn, err := grpc.Dial(address, grpc.WithInsecure())
 	defer conn.Close()
 	c := dataModification.NewPersonalInfoClient(conn)
 
-	cd := &dataModification.ContactDetails{
+	input := &dataModification.ContactDetails{
 		DisplayName: "Иванов Семен Петрович",
-		Email:       "example@gmail.com",
-		MobilePhone: strconv.Itoa(p),
-		WorkPhone:   strconv.Itoa(p),
+		Email:       "example" + strconv.Itoa(p) + "@gmail.com",
+		WorkPhone:   "",
 	}
+	wantedData := &dataModification.ContactDetails{
+		DisplayName: "Иванов Семен Петрович - (🏠) Личные дела",
+		Email:       "example" + strconv.Itoa(p) + "@gmail.com",
+		WorkPhone:   "",
+	}
+	wantedErr := codes.Unavailable
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 	defer cancel()
-	resp, err := c.GetReasonOfAbsence(ctx, cd)
-	if err != nil {
-		log.Fatalf("some error: %v", err)
-	}
-	log.Print(
-		"my data was: \n",
-		cd.String(), "\n",
-		"the data I get", "\n",
-		resp.String(),
-	)
+	resp, err := c.GetReasonOfAbsence(ctx, input)
 
+	if err != nil {
+		require.ErrorContains(t, err, wantedErr.String())
+	} else {
+		if wantedData.Email != resp.Email || wantedData.DisplayName != resp.DisplayName {
+			t.Logf("the data wanted %v\n the data I get %v\n", wantedData, resp)
+			t.FailNow()
+		}
+	}
 }
