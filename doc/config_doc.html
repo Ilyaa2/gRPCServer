@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<head>
+    <link rel="stylesheet" href="static_for_config_doc/css/screen.css">
+</head>
+<html>
+<body>
+<article>
+    <header><h1>Config file structure</h1>
+        <p>The json consists of a two objects 'appServerInfo' - parameters of internal server and 'externalServerInfo' -
+            parameters of external server. Important: Fields are clickable, just click on them!</p></header>
+    <span class="container">{</span>
+    <section><span title="required" class="required">&#9733;</span>
+        <h2>"appServerInfo":</h2>
+        <div class="properties">
+            <headergroup><p>Information about the application server.</p></headergroup>
+            <dl>
+                <dt>"type":</dt>
+                <dd>object</dd>
+                <dt><span title="required" class="required">&#9733;</span>"serverIp":</dt>
+                <dd class="new-block">
+                    <headergroup><p>IP address of the application server.</p></headergroup>
+                    <dl>
+                        <dt>"type":</dt>
+                        <dd>string</dd>
+                        <dt>"example":</dt>
+                        <dd>127.0.0.1</dd>
+                    </dl>
+                </dd>
+                <dt><span title="required" class="required">&#9733;</span>"serverPort":</dt>
+                <dd class="new-block">
+                    <headergroup><p>Port number of the application server.</p></headergroup>
+                    <dl>
+                        <dt>"type":</dt>
+                        <dd>string</dd>
+                        <dt>"example":</dt>
+                        <dd>8080</dd>
+                    </dl>
+                </dd>
+                <dt><span title="required" class="required">&#9733;</span>"amountOfWorkers":</dt>
+                <dd class="new-block">
+                    <headergroup><p>Number of worker on server, which will process the requests.</p></headergroup>
+                    <dl>
+                        <dt>"type":</dt>
+                        <dd>integer</dd>
+                        <dt>"minimum":</dt>
+                        <dd>1</dd>
+                        <dt>"example":</dt>
+                        <dd>8</dd>
+                    </dl>
+                </dd>
+                <dt><span title="required" class="required">&#9733;</span>"queueSize":</dt>
+                <dd class="new-block">
+                    <headergroup><p>Maximum size of the queue. All request will be placed there. If lenght of it will be
+                        exceeded then user will get an error.</p></headergroup>
+                    <dl>
+                        <dt>"type":</dt>
+                        <dd>integer</dd>
+                        <dt>"minimum":</dt>
+                        <dd>1</dd>
+                        <dt>"example":</dt>
+                        <dd>10</dd>
+                    </dl>
+                </dd>
+                <dt><span title="required" class="required">&#9733;</span>"ttlOfItemsInCache":</dt>
+                <dd class="new-block">
+                    <headergroup><p>Time-to-live (TTL) of items in the cache (in seconds).</p></headergroup>
+                    <dl>
+                        <dt>"type":</dt>
+                        <dd>integer</dd>
+                        <dt>"minimum":</dt>
+                        <dd>1</dd>
+                        <dt>"example":</dt>
+                        <dd>20000</dd>
+                    </dl>
+                </dd>
+                <dt><span title="required" class="required">&#9733;</span>"logLevel":</dt>
+                <dd class="new-block">
+                    <headergroup><p>Log level for the application.</p></headergroup>
+                    <dl>
+                        <dt>"type":</dt>
+                        <dd>string</dd>
+                        <dt>"enum":</dt>
+                        <dd class="new-block">
+                            <dl>
+                                <dt>"0":</dt>
+                                <dd>DEBUG</dd>
+                                <dt>"1":</dt>
+                                <dd>INFO</dd>
+                                <dt>"2":</dt>
+                                <dd>WARNING</dd>
+                                <dt>"3":</dt>
+                                <dd>ERROR</dd>
+                            </dl>
+                        </dd>
+                        <dt>"example":</dt>
+                        <dd>DEBUG</dd>
+                    </dl>
+                </dd>
+            </dl>
+        </div>
+    </section>
+    <section><span title="required" class="required">&#9733;</span>
+        <h2>"externalServerInfo":</h2>
+        <div class="properties">
+            <headergroup><p>Information about the external server.</p></headergroup>
+            <dl>
+                <dt>"type":</dt>
+                <dd>object</dd>
+                <dt><span title="required" class="required">&#9733;</span>"employeeUrlPath":</dt>
+                <dd class="new-block">
+                    <headergroup><p>URL path for employee data on the external server, which must provide person's id by
+                        email given.</p></headergroup>
+                    <dl>
+                        <dt>"type":</dt>
+                        <dd>string</dd>
+                        <dt>"format":</dt>
+                        <dd>uri</dd>
+                        <dt>"example":</dt>
+                        <dd>https://127.0.0.1:8081/Portal/springApi/api/employees</dd>
+                    </dl>
+                </dd>
+                <dt><span title="required" class="required">&#9733;</span>"absenceUrlPath":</dt>
+                <dd class="new-block">
+                    <headergroup><p>URL path for absence data on the external server, which must provide person's reason
+                        id of absence by id of the person.</p></headergroup>
+                    <dl>
+                        <dt>"type":</dt>
+                        <dd>string</dd>
+                        <dt>"format":</dt>
+                        <dd>uri</dd>
+                        <dt>"example":</dt>
+                        <dd>https://127.0.0.1:8081/Portal/springApi/api/absences</dd>
+                    </dl>
+                </dd>
+                <dt><span title="required" class="required">&#9733;</span>"requestTimeout":</dt>
+                <dd class="new-block">
+                    <headergroup><p>Timeout for external server requests (in milliseconds).</p></headergroup>
+                    <dl>
+                        <dt>"type":</dt>
+                        <dd>integer</dd>
+                        <dt>"minimum":</dt>
+                        <dd>50</dd>
+                        <dt>"example":</dt>
+                        <dd>2000</dd>
+                    </dl>
+                </dd>
+                <dt><span title="required" class="required">&#9733;</span>"login":</dt>
+                <dd class="new-block">
+                    <headergroup><p>Login credentials for external server authentication.</p></headergroup>
+                    <dl>
+                        <dt>"type":</dt>
+                        <dd>string</dd>
+                        <dt>"example":</dt>
+                        <dd>somelogin</dd>
+                    </dl>
+                </dd>
+                <dt><span title="required" class="required">&#9733;</span>"password":</dt>
+                <dd class="new-block">
+                    <headergroup><p>Password credentials for external server authentication.</p></headergroup>
+                    <dl>
+                        <dt>"type":</dt>
+                        <dd>string</dd>
+                        <dt>"example":</dt>
+                        <dd>password</dd>
+                    </dl>
+                </dd>
+            </dl>
+        </div>
+    </section>
+    <span class="container">}</span>
+    <footer><p>Built with <a href="https://www.github.com/mattyod/matic/">Matic.js</a>&nbsp;using <a
+            href="https://www.github.com/mattyod/matic-simple-example/config_doc.html">a simple example</a></p></footer>
+</article>
+<script src="static_for_config_doc/js/jquery.js"></script>
+<script src="static_for_config_doc/js/schema.js"></script>
+</body>
+</html>

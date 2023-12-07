@@ -25,7 +25,6 @@ type Server struct {
 
 func NewServer(cfg *config.Config, jq domain.JobsQueue, handler *transport.Handler,
 	services *service.Services, logger domain.CompositeLogger) *Server {
-
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Server{
 		handler:         handler,

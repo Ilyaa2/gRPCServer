@@ -63,7 +63,6 @@ func (e *EmployeeRepo) GetByEmail(ctx context.Context, email string) (*domain.Em
 }
 
 func (e *EmployeeRepo) GetAbsenceReason(ctx context.Context, empData *domain.EmployeeData) (*domain.AbsenceReason, error) {
-
 	reqID := util.GetReqIDFromContext(ctx)
 	if empData == nil {
 		e.compositeLogger.ApplicationLogger.Error(
@@ -119,7 +118,6 @@ func (e *EmployeeRepo) GetAbsenceReason(ctx context.Context, empData *domain.Emp
 }
 
 func (e *EmployeeRepo) doRequest(ctx context.Context, requestInfo func() (string, interface{})) (*http.Response, error) {
-
 	reqID := util.GetReqIDFromContext(ctx)
 	select {
 	case <-ctx.Done():
@@ -188,7 +186,6 @@ func (e *EmployeeRepo) doRequest(ctx context.Context, requestInfo func() (string
 
 func (e *EmployeeRepo) createRequest(ctx context.Context, reqID string, url string,
 	requestBody interface{}) (*http.Request, context.CancelFunc, error) {
-
 	jsonReq, err := json.Marshal(requestBody)
 	if err != nil {
 		err = fmt.Errorf("error during the conversion into JSON: %w. "+

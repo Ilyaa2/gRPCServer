@@ -1,0 +1,95 @@
+{
+  "name": "Config file structure",
+  "description": "The json consists of a two objects 'appServerInfo' - parameters of internal server and 'externalServerInfo' - parameters of external server. Important: Fields are clickable, just click on them!",
+  "type": "object",
+  "properties": {
+    "appServerInfo": {
+      "description": "Information about the application server.",
+      "type": "object",
+      "required": true,
+      "serverIp": {
+        "description": "IP address of the application server.",
+        "type": "string",
+        "required": true,
+        "example": "127.0.0.1"
+      },
+      "serverPort": {
+        "description": "Port number of the application server.",
+        "type": "string",
+        "required": true,
+        "example": "8080"
+      },
+      "amountOfWorkers": {
+        "description": "Number of worker on server, which will process the requests.",
+        "type": "integer",
+        "minimum": 1,
+        "required": true,
+        "example": 8
+      },
+      "queueSize": {
+        "description": "Maximum size of the queue. All request will be placed there. If lenght of it will be exceeded then user will get an error.",
+        "type": "integer",
+        "minimum": 1,
+        "required": true,
+        "example": 10
+      },
+      "ttlOfItemsInCache": {
+        "description": "Time-to-live (TTL) of items in the cache (in seconds).",
+        "type": "integer",
+        "minimum": 1,
+        "required": true,
+        "example": 20000
+      },
+      "logLevel": {
+        "description": "Log level for the application.",
+        "type": "string",
+        "enum": [
+          "DEBUG",
+          "INFO",
+          "WARNING",
+          "ERROR"
+        ],
+        "required": true,
+        "example": "DEBUG"
+      }
+    },
+    "externalServerInfo": {
+      "description": "Information about the external server.",
+      "type": "object",
+      "required": true,
+      "employeeUrlPath": {
+        "description": "URL path for employee data on the external server, which must provide person's id by email given.",
+        "type": "string",
+        "format": "uri",
+        "required": true,
+        "example": "https://127.0.0.1:8081/Portal/springApi/api/employees"
+      },
+      "absenceUrlPath": {
+        "description": "URL path for absence data on the external server, which must provide person's reason id of absence by id of the person.",
+        "type": "string",
+        "format": "uri",
+        "required": true,
+        "example": "https://127.0.0.1:8081/Portal/springApi/api/absences"
+      },
+      "requestTimeout": {
+        "description": "Timeout for external server requests (in milliseconds).",
+        "type": "integer",
+        "minimum": 50,
+        "required": true,
+        "example": 2000
+      },
+      "login": {
+        "description": "Login credentials for external server authentication.",
+        "type": "string",
+        "required": true,
+        "example": "somelogin"
+      },
+      "password": {
+        "description": "Password credentials for external server authentication.",
+        "type": "string",
+        "required": true,
+        "example": "password"
+      }
+    }
+  }
+}

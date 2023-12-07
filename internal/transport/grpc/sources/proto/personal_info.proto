@@ -1,14 +1,29 @@
+/**
+ * Messages related to modification of the personal information.
+ *
+ */
 syntax = "proto3";
 
 package dataModification;
 
+option go_package = "dataModification";
+
+/**
+ * Represents the personal information.
+ */
+message ContactDetails {
+  string displayName = 1; /// full name of a person (first name, middle name, last name)
+  string email = 2; /// email of person, which is an identifier
+  string mobilePhone = 3; /// mobile phone number of person
+  string workPhone = 4; /// work phone number of person
+}
+
+/**
+ * Service for modifying the information of a specific person.
+ */
 service PersonalInfo {
+  /// Used get the reason of absence of a specific person. Pass in a ContactDetails and modified ContactDetails will be returned.
   rpc getReasonOfAbsence(ContactDetails) returns (ContactDetails);
 }
 
-message ContactDetails {
-  string displayName = 1;
-  string email = 2;
-  string mobilePhone = 3;
-  string workPhone = 4;
-}
+

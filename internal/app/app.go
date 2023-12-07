@@ -3,7 +3,7 @@ package app
 import (
 	"gRPCServer/internal/config"
 	"gRPCServer/internal/domain"
-	"gRPCServer/internal/repository"
+	mock_repository "gRPCServer/internal/repository/mocks"
 	"gRPCServer/internal/server"
 	"gRPCServer/internal/service"
 	transport "gRPCServer/internal/transport/grpc"
@@ -40,8 +40,8 @@ func Run(configDir string) error {
 	jq := domain.JobsQueue{AbsenceJQ: &channel}
 
 	handler := transport.NewHandler(jq, compositeLogger)
-	EmpRepo := repository.NewEmployeeRepo(&cfg.ExtServInfo, compositeLogger)
-	//EmpRepo := &mock_repository.EmployeeRepoMock{}
+	//EmpRepo := repository.NewEmployeeRepo(&cfg.ExtServInfo, compositeLogger)
+	EmpRepo := &mock_repository.EmployeeRepoMock{}
 	reasons := domain.NewAbsenceOptions()
 
 	services := &service.Services{

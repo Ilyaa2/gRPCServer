@@ -25,7 +25,6 @@ type Handler struct {
 
 func (h *Handler) unaryLogInterceptor(ctx context.Context, req interface{},
 	info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-
 	reqID := uuid.New().String()
 	childCtx := context.WithValue(ctx, "req-id", reqID)
 

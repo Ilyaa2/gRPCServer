@@ -16,7 +16,8 @@ type EmployeeService struct {
 	cache           cache.Cache
 }
 
-func NewEmployeeService(repo repository.Employee, reasons *domain.AbsenceOptions, c cache.Cache, logger domain.CompositeLogger) *EmployeeService {
+func NewEmployeeService(repo repository.Employee, reasons *domain.AbsenceOptions,
+	c cache.Cache, logger domain.CompositeLogger) *EmployeeService {
 	return &EmployeeService{repo: repo,
 		reasons:         reasons,
 		cache:           c,
@@ -24,7 +25,8 @@ func NewEmployeeService(repo repository.Employee, reasons *domain.AbsenceOptions
 	}
 }
 
-func (e *EmployeeService) GetReasonOfAbsence(ctx context.Context, details *dataModification.ContactDetails) (*dataModification.ContactDetails, error) {
+func (e *EmployeeService) GetReasonOfAbsence(ctx context.Context,
+	details *dataModification.ContactDetails) (*dataModification.ContactDetails, error) {
 	var response *dataModification.ContactDetails
 	ok := false
 
